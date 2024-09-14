@@ -1,0 +1,20 @@
+[project]
+name = "newpro-autoloader"
+version = "0.0.1"
+authors = [
+  { name="Jacob Lipcon", email="jlipcon@newproip.com" },
+]
+description = "Interface to NewPro's TEM/SEM Autoloader"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://newproip.com"
+Repository = "https://github.com/newproip/autoloader"
+Issues = "https://github.com/newproip/autoloader/issues"
