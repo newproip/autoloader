@@ -14,6 +14,9 @@ class MainStatus:
 
 class AxisStatus:
 
+    def __init__(self):
+        self._position: float = 0.0
+        
     def unpack(self, data: bytearray, start_idx: int) -> int:
         self._position, = unpack_from("d", data, start_idx)
         start_idx += 8

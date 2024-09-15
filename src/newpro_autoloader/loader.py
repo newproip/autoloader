@@ -1,4 +1,6 @@
 from enum import IntEnum
+from threading import Thread
+from time import sleep
 
 from newpro_autoloader.axis_status import AxisStatus
 from newpro_autoloader.loader_connection import LoaderCommand, LoaderConnection
@@ -20,6 +22,14 @@ class Axis(IntEnum):
 
 class Loader:
 
+    def _updater(self):
+        try:
+            while self._run_thread:
+                self._get_status()
+                sleep(0.5)
+        except Exception as ex:
+            print(ex)
+
     def __init__(self,
                  address: str = "autoloader",
                  fallback_address: str = "192.168.0.9"):
@@ -29,6 +39,33 @@ class Loader:
         self._addresses = [address, fallback_address]
         self._connection: LoaderConnection = LoaderConnection(self._addresses, PORT_NUMBER)
         self._status_connection: LoaderConnection = LoaderConnection(self._addresses, PORT_NUMBER_STATUS)
+        self._update_thread = Thread(target=self._updater, name="Update thread", daemon=True)
+        self._run_thread = False
+
+    def __enter__(self):
+        self._run_thread = True
+        self._update_thread.start()
+        return self
+    
+    def __exit__(self, *args):
+        self._run_thread = False
+
+    # is_gripped
+    # index_loaded
+    # is_homed
+    # is_cassette_loading
+    # last_error
+    # slot states
+
+    def _get_status(self):
+        resp: bytearray = self._status_connection.command(LoaderCommand.GET_STATUS)
+        next_idx = RESPONSE_BODY_OFFSET
+
+        self._elevator_status: AxisStatus = AxisStatus()
+        next_idx = self._elevator_status.unpack(resp, next_idx)
+
+        self._loader_status: AxisStatus = AxisStatus()
+        next_idx = self._loader_status.unpack(resp, next_idx)
 
     def get_version(self) -> tuple[int, int, int]:
         """ Get basic info from the device
@@ -53,23 +90,6 @@ class Loader:
         
     def stop(self):
         self._status_connection.command(LoaderCommand.STOP)
-
-    # is_gripped
-    # index_loaded
-    # is_homed
-    # is_cassette_loading
-    # last_error
-    # slot states
-    
-    def get_status(self):
-        resp: bytearray = self._status_connection.command(LoaderCommand.GET_STATUS)
-        next_idx = RESPONSE_BODY_OFFSET
-
-        self._elevator_status: AxisStatus = AxisStatus()
-        next_idx = self._elevator_status.unpack(resp, next_idx)
-
-        self._loader_status: AxisStatus = AxisStatus()
-        next_idx = self._loader_status.unpack(resp, next_idx)
 
     def load(self, slot_number: int):
         self._connection.command(

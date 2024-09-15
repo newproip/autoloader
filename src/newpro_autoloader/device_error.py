@@ -230,11 +230,17 @@ class DeviceError(IntEnum):
     # No response arrived from a command =  timeout length depends on command type
     Timeout = 117,
 
+    # Action was cancelled
+    Cancelled = 118,
+
 
 class DeviceException(Exception):
     def __init__(self, code: DeviceError):
         self._code = code
 
+    def __str__(self) -> str:
+        return self._code.name
+    
     @property
     def error_code(self) -> DeviceError:
         return self._code

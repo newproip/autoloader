@@ -21,32 +21,13 @@ COMMAND_CODE_INDEX = 0
 
 class LoaderCommand(IntEnum):
     GET_VERSION = 0,
-    #GRIP = 1,
-    #LOCK = 2,
-    #ADVANCED_COMMAND = 3,
     HOME = 4,
-    #MOVE = 5,
     STOP = 6,
     GET_STATUS = 7,
-    #START_MAP = 8,
-    #STOP_MAP = 9,
-    #GET_MAP = 10,
-    #TEACH_MAP = 11,
-    #SET_SLOT_STATE = 12,
-    #PICK = 13,
-    #PLACE = 14,
-    #EXTEND = 15,
     LOAD = 16,
-    #NEXT_STEP = 17,
     LOAD_CASSETTE = 18,
-    #INSPECT = 19,
-    #REPLACE = 20,
-    #REPLACE_ALL = 21,
     EVAC = 22,
     CLEAR_LAST_ERROR = 23,
-    #ELOCK = 24,
-    #GET_REGISTER = 25,
-    #SET_REGISTER = 26,
 
 class LoaderConnection:
 
@@ -87,14 +68,14 @@ class LoaderConnection:
         cmd.extend([END_SYMBOL1, END_SYMBOL2])
 
         resp = self._connection.send(cmd, timeout)
+        resp_len = len(resp)
         
-        if len(resp) < MINIMUM_RESPONSE_LENGTH:
+        if resp is None or resp_len < MINIMUM_RESPONSE_LENGTH:
             raise DeviceException(DeviceError.InvalidResponseLength)
 
         if (resp[RECEIVE_START_SYMBOL1_INDEX] != START_SYMBOL1 or resp[RECEIVE_START_SYMBOL2_INDEX] != START_SYMBOL2):
             raise DeviceException(DeviceError.InvalidStartByte)
         
-        resp_len = len(resp)
         # Remove the end chars and crc
         resp_body = resp[RECEIVE_TO_ID_INDEX:resp_len-4]
         crc_low_byte, crc_high_byte = calculate_crc(resp_body)
