@@ -1,6 +1,7 @@
 from select import select
 from signal import signal, SIGINT
 from socket import socket
+from socket import error as SocketError
 from threading import RLock
 from time import time
 
@@ -83,24 +84,27 @@ class Connection:
         return self._socket is not None
     
     def _connect(self):
-        ex: Exception = None
+        ex_saved: Exception = None
 
         with self._lock:
             for address in self._address:
                 try:
                     self._disconnect()
                     self._socket = socket()
-                    self._socket.connect_ex((address, self._port))
+                    ret = self._socket.connect_ex((address, self._port))
+                    if ret != 0:
+                        DeviceException(DeviceError.ConnectionFailed)
                     self._socket.setblocking(False)
                     self._address_active = address
-                    break
+                    return
                 
-                except ex:
+                except Exception as ex:
                     self._socket = None
                     self._address_active = None
+                    ex_saved = ex
 
-        if ex is not None:
-            raise ex
+        if ex_saved is not None:
+            raise ex_saved
     
     def _disconnect(self):
         with self._lock:
