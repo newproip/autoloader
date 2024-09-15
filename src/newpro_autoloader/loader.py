@@ -2,7 +2,8 @@ from enum import IntEnum
 from threading import Thread
 from time import sleep
 
-from newpro_autoloader.axis_status import AxisStatus
+from newpro_autoloader.axis_status import AxisStatus, MainStatus, OverallSystemStatus
+from newpro_autoloader.device_error import DeviceError
 from newpro_autoloader.loader_connection import LoaderCommand, LoaderConnection
 
 PORT_NUMBER = 1234
@@ -19,6 +20,11 @@ class Axis(IntEnum):
     Elevator = 0,
     Loader = 1,
     All = 2,
+
+class SlotState(IntEnum):
+    Absent = 0,
+    Present = 1,
+    Unknown = 2,
 
 class Loader:
 
@@ -42,6 +48,10 @@ class Loader:
         self._update_thread = Thread(target=self._updater, name="Update thread", daemon=True)
         self._run_thread = False
 
+        self._elevator_status: AxisStatus = AxisStatus()
+        self._loader_status: AxisStatus = AxisStatus()
+        self._main_status: MainStatus = MainStatus()
+
     def __enter__(self):
         self._run_thread = True
         self._update_thread.start()
@@ -50,22 +60,51 @@ class Loader:
     def __exit__(self, *args):
         self._run_thread = False
 
-    # is_gripped
-    # index_loaded
-    # is_homed
+    @property
+    def gripped(self) -> bool:
+        return self._main_status._gripped_from_slot != 0
+    
+    @property
+    def index_loaded(self) -> int | None:
+        slot = self._main_status._gripped_from_slot
+        if slot:
+            return slot
+        else:
+            return None
+        
+    @property
+    def is_homed(self) -> bool:
+        loader_homed: bool = self._loader_status._overall_status & OverallSystemStatus.AbsolutePositionKnown
+        elevator_homed: bool = self._elevator_status._overall_status & OverallSystemStatus.AbsolutePositionKnown
+        return loader_homed and elevator_homed
+
+    @property
+    def last_error(self) -> DeviceError | int:
+        try:
+            return DeviceError(self._main_status._last_error)
+        except IndexError:
+            return self._main_status._last_error
+    
+    def slot_state(self, slot_number: int) -> SlotState:
+        state: bool = self._main_status._slot_state & (1 << slot_number-1) > 0
+        known: bool = self._main_status._slot_known & (1 << slot_number-1) > 0
+        if known:
+            if state:
+                return SlotState.Present
+            else:
+                return SlotState.Absent
+        else:
+            return SlotState.Unknown
+        
     # is_cassette_loading
-    # last_error
-    # slot states
 
     def _get_status(self):
         resp: bytearray = self._status_connection.command(LoaderCommand.GET_STATUS)
         next_idx = RESPONSE_BODY_OFFSET
 
-        self._elevator_status: AxisStatus = AxisStatus()
         next_idx = self._elevator_status.unpack(resp, next_idx)
-
-        self._loader_status: AxisStatus = AxisStatus()
         next_idx = self._loader_status.unpack(resp, next_idx)
+        next_idx = self._main_status.unpack(resp, next_idx)
 
     def get_version(self) -> tuple[int, int, int]:
         """ Get basic info from the device
@@ -87,8 +126,9 @@ class Loader:
             bytearray([axis, vacuum_safe]),
             HOME_TIMEOUT
         )
+        self._get_status()
         
-    def stop(self):
+    def stop(self, signum = None, frame = None):
         self._status_connection.command(LoaderCommand.STOP)
 
     def load(self, slot_number: int):
@@ -104,6 +144,7 @@ class Loader:
             bytearray([vacuum_safe]),
             LOAD_TIMEOUT
         )
+        self._get_status()
 
     def evac(self):
         self._connection.command(

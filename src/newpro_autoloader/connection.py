@@ -1,5 +1,4 @@
 from select import select
-from signal import signal, SIGINT
 from socket import socket
 from socket import error as SocketError
 from threading import RLock
@@ -14,19 +13,12 @@ class Connection:
     """Send and receive byte arrays with message framing based on 
     a terminator byte sequence"""
 
-    @classmethod
-    def _cancel(cls, signum, frame):
-        cls._abort_send = True
-
     def __init__(self,
                  address: list[str],
                  port: int,
                  terminator: bytearray):
         """Create a socket connection.  Does not try to connect until
         a message is sent."""
-
-        Connection._abort_send = False
-        signal(SIGINT, Connection._cancel)
 
         self._address = address
         self._port = port
@@ -36,6 +28,10 @@ class Connection:
         self._lock = RLock()
         self._socket: socket = None
         self._select_timeout = 0.5
+        self._abort_send = False
+
+    def cancel(self):
+        self._abort_send = True
 
     def send(self,
              msg: bytearray,
@@ -47,12 +43,12 @@ class Connection:
 
             try:
                 self._socket.send(msg)
-                Connection._abort_send = False
+                self._abort_send = False
 
                 start: float = time()
                 response: bytearray = bytearray()
                 while True:
-                    if Connection._abort_send:
+                    if self._abort_send:
                         raise DeviceException(DeviceError.Cancelled)
                     
                     if time() - start > timeout:
