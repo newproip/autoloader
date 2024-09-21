@@ -82,7 +82,7 @@ class LoaderConnection:
         if crc_low_byte != resp[resp_len-4] or crc_high_byte != resp[resp_len-3]:
             raise DeviceException(DeviceError.InvalidCRC)
         
-        body_len = int.from_bytes(resp[RECEIVE_BLOCK_SIZE:RECEIVE_BLOCK_SIZE+1], "little")
+        body_len = int.from_bytes(resp[RECEIVE_BLOCK_SIZE:RECEIVE_BLOCK_SIZE+2], "little")
         
         message_body: bytearray = resp[RECEIVE_DATA_START_INDEX:RECEIVE_DATA_START_INDEX+body_len]
         if message_body[COMMAND_CODE_INDEX] != int(cmd_type):
@@ -159,11 +159,11 @@ def calculate_crc(data: bytearray) -> bytearray:
 
         returns 2 checksum bytes"""
 
-    crcLowByte = 0
-    crcHighByte = 0
+    crc_low_byte = 0
+    crc_high_byte = 0
     for i in range(len(data)):
-        tableIndex = crcLowByte ^ data[i]
-        crcLowByte = CrcL[tableIndex] ^ crcHighByte
-        crcHighByte = CrcH[tableIndex]
+        table_index = crc_low_byte ^ data[i]
+        crc_low_byte = CrcL[table_index] ^ crc_high_byte
+        crc_high_byte = CrcH[table_index]
 
-    return bytearray([crcLowByte, crcHighByte])
+    return bytearray([crc_low_byte, crc_high_byte])
