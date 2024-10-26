@@ -4,20 +4,25 @@ from signal import signal, SIGINT
 from newpro_autoloader.loader import Loader
 
 def print_status(loader: Loader):
+    status_str = "STATUS: "
     if loader.is_homed:
-        print("loader is homed")
+        status_str = status_str + "homed, "
     else:
-        print("loader is NOT homed")
+        status_str = status_str + "NOT homed, "
+
+    status_str = status_str + "grip state is " + loader.grip_state.name + ", "
 
     if loader.is_gripped:
-        print("slot " + str(loader.index_loaded) + " is loaded")
+        status_str = status_str + "slot " + str(loader.index_loaded) + " is loaded, "
     else:
-        print("nothing is loaded")
+        status_str = status_str + "nothing is loaded, "
 
     if loader.is_cassette_present:
-        print("cassette is present")
+        status_str = status_str + "cassette is present"
     else:
-        print("cassette is NOT present")
+        status_str = status_str + "cassette is NOT present"
+
+    print(status_str)
 
 # Entering this context starts a background thread that polls the status
 loader: Loader
@@ -31,6 +36,8 @@ with Loader() as loader:
     print("Loader is initializing...")
     print(f"version {loader.version}.{loader.sub_version}, {loader.number_of_slots} slot capacity")
     print_status(loader)
+    loader.clear()
+    print_status(loader)
 
     # Home must be complete before other actions that include motion
     print("Homing...")
@@ -42,16 +49,18 @@ with Loader() as loader:
     input("Load lock is open, please load a new cassette.  Press enter when done.")
 
     # Second call completes the process after the user has installed the cassette
+    print("Load lock is closed, please wait...")
     loader.load_cassette()
-    print("Load lock is closed, new cassette loaded")
+    print("New cassette is loaded and mapped")
 
-    # Put a sample into the instrument.  Slot numbers are 1-based.
+    # Show the slot states
     for slot in range(1, loader.number_of_slots+1, 1):
-        #print(f"Loading sample {slot}, please wait...")
-        #loader.load(slot)
-        #input(f"Sample {slot} loaded, press enter to load next")
         print(f"slot {slot} is {loader.slot_state(slot).name}")
 
+    # Put a sample into the instrument.  Slot numbers are 1-based.
+    slot_to_load = 3
+
     print_status(loader)
-    loader.load(1)
+    print(f"Loading sample {slot_to_load}, please wait...")
+    loader.load(slot_to_load)
     print_status(loader)

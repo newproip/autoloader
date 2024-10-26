@@ -24,6 +24,7 @@ class LoaderCommand(IntEnum):
     HOME = 4,
     STOP = 6,
     GET_STATUS = 7,
+    SET_SLOT_STATE = 12,
     LOAD = 16,
     LOAD_CASSETTE = 18,
     EVAC = 22,

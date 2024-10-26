@@ -21,7 +21,7 @@ class Axis(IntEnum):
     Loader = 1,
     All = 2,
 
-class SlotState(IntEnum):
+class PayloadState(IntEnum):
     Absent = 0,
     Present = 1,
     Unknown = 2,
@@ -64,25 +64,32 @@ class Loader:
 
     @property
     def number_of_slots(self) -> int:
+        """Number of slots in the cassette"""
         return self._number_of_slots
     
     @property
     def version(self) -> int:
+        """Main version number, indicating Alpha or Beta"""
         return self._version
     
     @property
     def sub_version(self) -> int:
+        """Embedded software version number"""
         return self._sub_version
     
     @property
     def is_cassette_present(self) -> bool:
         """Return True if a cassette is installed in the loader"""
-        return self.slot_state(self.number_of_slots + 1) == SlotState.Present
+        return self.slot_state(self.number_of_slots + 1) == PayloadState.Present
     
     @property
     def is_gripped(self) -> bool:
         """Return True if the gripper is full"""
         return self._main_status._gripped_from_slot != 0
+    
+    @property
+    def grip_state(self) -> PayloadState:
+        return self.slot_state(self.number_of_slots + 2) 
     
     @property
     def index_loaded(self) -> int | None:
@@ -105,6 +112,7 @@ class Loader:
 
     @property
     def last_error(self) -> DeviceError | int:
+        """The latched last error code"""
         try:
             return DeviceError(self._main_status._last_error)
         except IndexError:
@@ -114,24 +122,17 @@ class Loader:
     def _loader_type(self) -> LoaderType:
         return LoaderType.Beta if self.version else LoaderType.Alpha
     
-    def slot_state(self, slot_number: int) -> SlotState:
+    def slot_state(self, slot_number: int) -> PayloadState:
+        """Get the state of the given slot number: Present, Absent, or Unknown."""
         state: bool = self._main_status._slot_state & (1 << slot_number-1) > 0
         known: bool = self._main_status._slot_known & (1 << slot_number-1) > 0
         if known:
             if state:
-                return SlotState.Present
+                return PayloadState.Present
             else:
-                return SlotState.Absent
+                return PayloadState.Absent
         else:
-            return SlotState.Unknown
-
-    def _get_status(self):
-        resp: bytearray = self._status_connection.command(LoaderCommand.GET_STATUS)
-        next_idx = RESPONSE_BODY_OFFSET
-
-        next_idx = self._elevator_status.unpack(resp, next_idx, self._loader_type)
-        next_idx = self._loader_status.unpack(resp, next_idx, self._loader_type)
-        next_idx = self._main_status.unpack(resp, next_idx)
+            return PayloadState.Unknown
 
     def get_version(self) -> tuple[int, int, int]:
         """ Get basic info from the device
@@ -148,6 +149,8 @@ class Loader:
         return version, sub_version, number_of_slots
     
     def home(self, axis: Axis = Axis.All, vacuum_safe: bool = True):
+        """Initialize all motion axes, locating them with respect to their limit switches if necessary.
+        Both axes are also moved to the home positions."""
         self._connection.command(
             LoaderCommand.HOME,
             bytearray([axis, vacuum_safe]),
@@ -158,12 +161,16 @@ class Loader:
     def stop(self, signum = None, frame = None):
         """Immediately stops loader motion/action
         args:
-            signum and frame are there so that this can be used
+            signum and frame so that this can be used
             as an OS signal handler
         """
         self._status_connection.command(LoaderCommand.STOP)
 
     def load(self, slot_number: int):
+        """Take whatever actions are necessary to place the sample in the provided slot
+        into the imaging location.  The actions can include retracting and placing a sample
+        already held in the gripper, picking the desired sample from its shelf, and extending
+        to the imaging location."""
         self._connection.command(
             LoaderCommand.LOAD,
             bytearray([slot_number]),
@@ -171,6 +178,12 @@ class Loader:
         )
 
     def load_cassette(self, vacuum_safe: bool = True):
+        """Bring the system to a state where the user can remove and replace the sample cassette.
+        The first time this command completes, the user will be able to open the load lock door,
+        remove the existing cassette (if any) and install a new cassette.  They would then close
+        and lock the door and then cause this command to be issued a second time.  When this command
+        is executed a second time, the load lock is locked and the cassette is mapped and made ready
+        for use."""
         self._connection.command(
             LoaderCommand.LOAD_CASSETTE,
             bytearray([vacuum_safe]),
@@ -179,10 +192,32 @@ class Loader:
         self._get_status()
 
     def evac(self):
+        """Retract from the imaging position to the evac position.  When in the evac position, this
+        command will cause the loader to return/extend to the imaging position."""
         self._connection.command(
             LoaderCommand.EVAC,
             timeout=EVAC_TIMEOUT
         )
 
     def clear_last_error(self):
+        """Reset the latched last error code"""
         self._connection.command(LoaderCommand.CLEAR_LAST_ERROR)
+
+    def clear(self):
+        """Indicate to the loader that the gripper and cassette are both empty.  Normally, the state of
+        the gripper and the cassette would be found automatically by the loader during the LoadCassette
+        process if the map sensor is in use.  This function is provided for convenience only and should
+        ideally be used only in simulation mode."""
+        self._connection.command(
+            LoaderCommand.SET_SLOT_STATE,
+            bytearray([255,255,255,255,0,0,0,0]),
+        )
+        self._get_status()
+
+    def _get_status(self):
+        resp: bytearray = self._status_connection.command(LoaderCommand.GET_STATUS)
+        next_idx = RESPONSE_BODY_OFFSET
+
+        next_idx = self._elevator_status.unpack(resp, next_idx, self._loader_type)
+        next_idx = self._loader_status.unpack(resp, next_idx, self._loader_type)
+        next_idx = self._main_status.unpack(resp, next_idx)
