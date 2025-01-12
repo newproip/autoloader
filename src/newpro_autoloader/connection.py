@@ -3,7 +3,7 @@ from select import select
 from socket import socket
 from threading import RLock
 from time import time
-from typing import Optional
+from typing import List, Optional
 
 from newpro_autoloader.device_error import DeviceError, DeviceException
 
@@ -16,7 +16,7 @@ class Connection:
     a terminator byte sequence"""
 
     def __init__(self,
-                 address: list[str],
+                 address: List[str],
                  port: int,
                  terminator: bytearray):
         """Create a socket connection.  Does not try to connect until

@@ -1,6 +1,6 @@
 """Communication with autoloader using a binary protocol over TCP"""
 from enum import IntEnum
-from typing import Optional
+from typing import List, Optional
 
 from newpro_autoloader.connection import Connection, DEFAULT_TIMEOUT
 from newpro_autoloader.device_error import DeviceError, DeviceException
@@ -37,7 +37,7 @@ class LoaderConnection:
     """Connects to the autoloader and manages formatting of commands and parsing
     of responses"""
 
-    def __init__(self, address: list[str], port: int):
+    def __init__(self, address: List[str], port: int):
         """Create a loader connection.  Does not try to connect until
         a command is sent."""
 

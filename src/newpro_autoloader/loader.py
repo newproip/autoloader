@@ -2,7 +2,7 @@
 from enum import IntEnum
 from threading import Thread
 from time import sleep
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 from newpro_autoloader.axis_status import AxisStatus, LoaderType, MainStatus, OverallSystemStatus
 from newpro_autoloader.device_error import DeviceError
@@ -30,7 +30,7 @@ class PayloadState(IntEnum):
     PRESENT = 1
     UNKNOWN = 2
 
-class Loader:
+class Loader:  # pylint: disable=too-many-instance-attributes
     """Top-level class for accessing the autoloader.  Can be used as a context
     manager to maintain the connection resources."""
     def _updater(self):
@@ -140,12 +140,12 @@ class Loader:
         if known:
             if state:
                 return PayloadState.PRESENT
-            else:
-                return PayloadState.ABSENT
+
+            return PayloadState.ABSENT
 
         return PayloadState.UNKNOWN
 
-    def get_version(self) -> tuple[int, int, int]:
+    def get_version(self) -> Tuple[int, int, int]:
         """ Get basic info from the device
         returns:
             version: Main version number  
