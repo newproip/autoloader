@@ -33,7 +33,7 @@ class LoaderCommand(IntEnum):
     EVAC = 22
     CLEAR_LAST_ERROR = 23
 
-class LoaderConnection:
+class LoaderConnection:     # pylint: disable=too-few-public-methods
     """Connects to the autoloader and manages formatting of commands and parsing
     of responses"""
 

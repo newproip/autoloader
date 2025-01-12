@@ -75,7 +75,7 @@ class MainStatus:
         """Bitfield indicating the payload KNOWN state of all slots"""
         return self._slot_known
 
-class AxisStatus:
+class AxisStatus:  # pylint: disable=too-many-instance-attributes
     """Status object related to one or the other autoloader axes (elevator or loader)"""
 
     def __init__(self):
