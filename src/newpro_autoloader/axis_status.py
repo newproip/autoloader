@@ -1,21 +1,35 @@
+"""Functions for parsing autoloader status at the per-axis level"""
 from enum import IntEnum
 from struct import unpack_from
 
 SIZE_OF_ACTION_NAME = 32
 
 class OverallSystemStatus(IntEnum):
-    AbsolutePositionKnown = 1,
-    PhaseDetected = 2,
-    ServoEnbled = 4,
-    InMotion = 8,
+    """System status bitfield"""
+    ABSOLUTE_POSITION_KNOWN = 1
+    PHASE_DETECTED = 2
+    SERVO_ENABLED = 4
+    IN_MOTION = 8
 
 class LoaderType(IntEnum):
-    Alpha = 0,
-    Beta = 1,
+    """Autoloader compatability version"""
+    ALPHA = 0
+    BETA = 1
 
 class MainStatus:
+    """Status object related to the autoloader overall"""
+
+    def __init__(self):
+        self._slot_known: int = 0
+        self._slot_state: int = 0
+        self._closest_slot: int = 0
+        self._percent_extended: float = 0
+        self._current_action: str = ""
+        self._last_error: int = 0
+        self._gripped_from_slot: int = 0
 
     def unpack(self, data: bytearray, start_idx: int) -> int:
+        """Initialize fields based on the incoming byte stream status"""
         self._slot_known, = unpack_from("I", data, start_idx)
         start_idx += 4
 
@@ -36,20 +50,54 @@ class MainStatus:
 
         self._gripped_from_slot, = unpack_from("i", data, start_idx)
         start_idx += 4
-        
+
         return start_idx
 
+    @property
+    def gripped_from_slot(self):
+        """A non-zero value indicates the shelf from which the currently
+        gripper payload came from"""
+        return self._gripped_from_slot
+
+    @property
+    def last_error(self):
+        """The last error code raised during operaton"""
+        return self._last_error
+
+    @property
+    def slot_state(self):
+        """Bitfield indicating the payload state of all slots"""
+        return self._slot_state
+
+    @property
+    def slot_known(self):
+        """Bitfield indicating the payload KNOWN state of all slots"""
+        return self._slot_known
+
 class AxisStatus:
+    """Status object related to one or the other autoloader axes (elevator or loader)"""
 
     def __init__(self):
         self._position: float = 0.0
         self._overall_status: OverallSystemStatus | None = None
 
+        self._overall_status: int = 0
+        self._drive_status: int = 0
+        self._step_count_status: int = 0
+        self._actual_current_status: int = 0
+        self._motion_status: int = 0
+        self._motor_position: int = 0
+        self._encoder_position: int = 0
+        self._motor_velocity: int = 0
+        self._pwm_status: int = 0
+        self._general_status: int = 0
+
     def unpack(self, data: bytearray, start_idx: int, loader_type: LoaderType) -> int:
+        """Initialize fields based on the incoming byte stream status"""
         self._position, = unpack_from("d", data, start_idx)
         start_idx += 8
 
-        if loader_type == LoaderType.Beta:
+        if loader_type == LoaderType.BETA:
             self._overall_status, = unpack_from("H", data, start_idx)
             start_idx += 2
 
@@ -104,10 +152,15 @@ class AxisStatus:
             start_idx += 4
             # PositionCapture
             start_idx += 4
-            
+
             self._overall_status, = unpack_from("H", data, start_idx)
             start_idx += 2
 
             start_idx += 50
 
         return start_idx
+
+    @property
+    def status(self):
+        """Axis status"""
+        return self._overall_status

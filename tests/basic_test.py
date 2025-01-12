@@ -1,23 +1,24 @@
-
+"""An example script that shows how to use the Loader class to interface to the hardware"""
 from signal import signal, SIGINT
 
 from newpro_autoloader.loader import Loader
 
-def print_status(loader: Loader):
+def print_status(loader_in: Loader):
+    """An example of displaying some information about the loader"""
     status_str = "STATUS: "
-    if loader.is_homed:
+    if loader_in.is_homed:
         status_str = status_str + "homed, "
     else:
         status_str = status_str + "NOT homed, "
 
-    status_str = status_str + "grip state is " + loader.grip_state.name + ", "
+    status_str = status_str + "grip state is " + loader_in.grip_state.name + ", "
 
-    if loader.is_gripped:
-        status_str = status_str + "slot " + str(loader.index_loaded) + " is loaded, "
+    if loader_in.is_gripped:
+        status_str = status_str + "slot " + str(loader_in.index_loaded) + " is loaded, "
     else:
         status_str = status_str + "nothing is loaded, "
 
-    if loader.is_cassette_present:
+    if loader_in.is_cassette_present:
         status_str = status_str + "cassette is present"
     else:
         status_str = status_str + "cassette is NOT present"
@@ -58,7 +59,7 @@ with Loader() as loader:
         print(f"slot {slot} is {loader.slot_state(slot).name}")
 
     # Put a sample into the instrument.  Slot numbers are 1-based.
-    slot_to_load = 3
+    slot_to_load: int = 3
 
     print_status(loader)
     print(f"Loading sample {slot_to_load}, please wait...")
