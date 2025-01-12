@@ -5,3 +5,4 @@ The autoloader from NewPro LLC is a device that attaches to the side loading por
 This project is a native Python library for commanding the autoloader.  It can be integrated into other applications to coordinate the loading of samples with the operation of the microscope.  A .NET assembly is also available which serves the same purpose.
 
 # Example
+Refer to `basic_test.py`.
