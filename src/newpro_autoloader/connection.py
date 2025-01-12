@@ -3,10 +3,12 @@ from select import select
 from socket import socket
 from threading import RLock
 from time import time
+from typing import Optional
 
 from newpro_autoloader.device_error import DeviceError, DeviceException
 
 DEFAULT_TIMEOUT: float = 5.0
+SELECT_TIMEOUT: float = 0.5
 RECEIVE_COUNT: int = 2048
 
 class Connection:
@@ -24,10 +26,9 @@ class Connection:
         self._port = port
         self._terminator = terminator
 
-        self._address_active: str | None = None
+        self._address_active: Optional[str] = None
         self._lock = RLock()
-        self._socket: socket | None = None
-        self._select_timeout = 0.5
+        self._socket: Optional[socket] = None
         self._abort_send = False
 
     def cancel(self):
@@ -56,7 +57,7 @@ class Connection:
                     if time() - start > timeout:
                         raise DeviceException(DeviceError.TIMEOUT)
 
-                    ready_sockets = select([self._socket], [], [], self._select_timeout)
+                    ready_sockets = select([self._socket], [], [], SELECT_TIMEOUT)
                     if ready_sockets[0]:
                         response.extend(self._socket.recv(RECEIVE_COUNT))
                         if self._terminator is None:

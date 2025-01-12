@@ -1,6 +1,7 @@
 """Functions for parsing autoloader status at the per-axis level"""
 from enum import IntEnum
 from struct import unpack_from
+from typing import Optional
 
 SIZE_OF_ACTION_NAME = 32
 
@@ -79,7 +80,7 @@ class AxisStatus:
 
     def __init__(self):
         self._position: float = 0.0
-        self._overall_status: OverallSystemStatus | None = None
+        self._overall_status: Optional[OverallSystemStatus] = None
 
         self._overall_status: int = 0
         self._drive_status: int = 0

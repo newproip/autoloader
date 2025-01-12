@@ -1,5 +1,6 @@
 """Communication with autoloader using a binary protocol over TCP"""
 from enum import IntEnum
+from typing import Optional
 
 from newpro_autoloader.connection import Connection, DEFAULT_TIMEOUT
 from newpro_autoloader.device_error import DeviceError, DeviceException
@@ -51,7 +52,7 @@ class LoaderConnection:
 
     def command(self,
              cmd_type: LoaderCommand,
-             msg: bytearray | None = None,
+             msg: Optional[bytearray] = None,
              timeout: float = DEFAULT_TIMEOUT,
     ) -> bytearray:
         """Send a command and receive the response"""

@@ -2,6 +2,7 @@
 from enum import IntEnum
 from threading import Thread
 from time import sleep
+from typing import Optional, Union
 
 from newpro_autoloader.axis_status import AxisStatus, LoaderType, MainStatus, OverallSystemStatus
 from newpro_autoloader.device_error import DeviceError
@@ -100,14 +101,14 @@ class Loader:
         return self.slot_state(self.number_of_slots + 2)
 
     @property
-    def index_loaded(self) -> int | None:
+    def index_loaded(self) -> Optional[int]:
         """This indicates the slot number of the currently gripped payload, if any.
         It does not indicate if the payload is fully loaded into the microscope."""
         slot = self._main_status.gripped_from_slot
         if slot:
             return slot
-        else:
-            return None
+
+        return None
 
     @property
     def is_homed(self) -> bool:
@@ -121,7 +122,7 @@ class Loader:
         return loader_homed and elevator_homed
 
     @property
-    def last_error(self) -> DeviceError | int:
+    def last_error(self) -> Union[DeviceError, int]:
         """The latched last error code"""
         try:
             return DeviceError(self._main_status.last_error)
@@ -141,8 +142,8 @@ class Loader:
                 return PayloadState.PRESENT
             else:
                 return PayloadState.ABSENT
-        else:
-            return PayloadState.UNKNOWN
+
+        return PayloadState.UNKNOWN
 
     def get_version(self) -> tuple[int, int, int]:
         """ Get basic info from the device
